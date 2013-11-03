@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	amber "github.com/eknkc/amber"
 	"os"
+	amber "pendo.io/forks/amber"
 )
 
 var prettyPrint bool
