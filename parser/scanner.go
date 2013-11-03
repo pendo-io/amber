@@ -354,9 +354,11 @@ func (s *scanner) scanAttribute() *token {
 		s.consume(len(sm[0]))
 
 		if len(sm[3]) != 0 || sm[2] == "" {
+			fmt.Printf("raw 1: %s 2: %s 3: %s 4: %s\n", sm[1], sm[2], sm[3], sm[4])
 			return &token{tokAttribute, sm[1], map[string]string{"Content": sm[3], "Mode": "raw", "Condition": sm[5]}}
 		}
 
+		fmt.Printf("exp 1: %s 2: %s 3: %s 4: %s\n", sm[1], sm[2], sm[3], sm[4])
 		return &token{tokAttribute, sm[1], map[string]string{"Content": sm[4], "Mode": "expression", "Condition": sm[5]}}
 	}
 
@@ -416,7 +418,7 @@ func (s *scanner) scanText() *token {
 		mode := "inline"
 		if sm[1] == "|" {
 			mode = "piped"
-                        sm[2] = sm[2] + "\n"
+			sm[2] = sm[2] + "\n"
 		}
 
 		return &token{tokText, sm[2], map[string]string{"Mode": mode}}

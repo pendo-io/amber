@@ -154,7 +154,9 @@ func (c *Compiler) Compile() (*template.Template, error) {
 
 // Same as Compile but allows to specify a name for the template
 func (c *Compiler) CompileWithName(name string) (*template.Template, error) {
-	return c.CompileWithTemplate(template.New(name))
+	t := template.New(name)
+	t.Delims("{<{", "}>}")
+	return c.CompileWithTemplate(t)
 }
 
 // Same as Compile but allows to specify a template
@@ -296,7 +298,7 @@ func (c *Compiler) visitComment(comment *parser.Comment) {
 	c.indent(0, false)
 
 	if comment.Block == nil {
-		c.write(`{{unescaped "<!-- ` + c.escape(comment.Value) + ` -->"}}`)
+		c.write(`{<{unescaped "<!-- ` + c.escape(comment.Value) + ` -->"}>}`)
 	} else {
 		c.write(`<!-- ` + comment.Value)
 		c.visitBlock(comment.Block)
@@ -305,13 +307,13 @@ func (c *Compiler) visitComment(comment *parser.Comment) {
 }
 
 func (c *Compiler) visitCondition(condition *parser.Condition) {
-	c.write(`{{if ` + c.visitRawInterpolation(condition.Expression) + `}}`)
+	c.write(`{<{if ` + c.visitRawInterpolation(condition.Expression) + `}>}`)
 	c.visitBlock(condition.Positive)
 	if condition.Negative != nil {
-		c.write(`{{else}}`)
+		c.write(`{<{else}>}`)
 		c.visitBlock(condition.Negative)
 	}
-	c.write(`{{end}}`)
+	c.write(`{<{end}>}`)
 }
 
 func (c *Compiler) visitEach(each *parser.Each) {
@@ -320,16 +322,16 @@ func (c *Compiler) visitEach(each *parser.Each) {
 	}
 
 	if len(each.Y) == 0 {
-		c.write(`{{range ` + each.X + ` := ` + c.visitRawInterpolation(each.Expression) + `}}`)
+		c.write(`{<{range ` + each.X + ` := ` + c.visitRawInterpolation(each.Expression) + `}>}`)
 	} else {
-		c.write(`{{range ` + each.X + `, ` + each.Y + ` := ` + c.visitRawInterpolation(each.Expression) + `}}`)
+		c.write(`{<{range ` + each.X + `, ` + each.Y + ` := ` + c.visitRawInterpolation(each.Expression) + `}>}`)
 	}
 	c.visitBlock(each.Block)
-	c.write(`{{end}}`)
+	c.write(`{<{end}>}`)
 }
 
 func (c *Compiler) visitAssignment(assgn *parser.Assignment) {
-	c.write(`{{` + assgn.X + ` := ` + c.visitRawInterpolation(assgn.Expression) + `}}`)
+	c.write(`{<{` + assgn.X + ` := ` + c.visitRawInterpolation(assgn.Expression) + `}>}`)
 }
 
 func (c *Compiler) visitTag(tag *parser.Tag) {
@@ -349,8 +351,10 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 			attr.value = c.visitInterpolation(item.Value)
 		} else if item.Value == "" {
 			attr.value = ""
+		} else if len(item.Value) > 5 && strings.Index(item.Value, "{{") < strings.Index(item.Value, "}}") {
+			attr.value = item.Value
 		} else {
-			attr.value = `{{"` + item.Value + `"}}`
+			attr.value = `{<{"` + item.Value + `"}>}`
 		}
 
 		if len(item.Condition) != 0 {
@@ -362,12 +366,12 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 			attr.value = ` ` + attr.value
 
 			if len(attr.condition) > 0 {
-				attr.value = `{{if ` + attr.condition + `}}` + attr.value + `{{end}}`
+				attr.value = `{<{if ` + attr.condition + `}>}` + attr.value + `{<{end}>}`
 				attr.condition = ""
 			}
 
 			if len(prevclass.condition) > 0 {
-				prevclass.value = `{{if ` + prevclass.condition + `}}` + prevclass.value + `{{end}}`
+				prevclass.value = `{<{if ` + prevclass.condition + `}>}` + prevclass.value + `{<{end}>}`
 				prevclass.condition = ""
 			}
 
@@ -382,7 +386,7 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 
 	for name, value := range attribs {
 		if len(value.condition) > 0 {
-			c.write(`{{if ` + value.condition + `}}`)
+			c.write(`{<{if ` + value.condition + `}>}`)
 		}
 
 		if value.value == "" {
@@ -392,7 +396,7 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 		}
 
 		if len(value.condition) > 0 {
-			c.write(`{{end}}`)
+			c.write(`{<{end}>}`)
 		}
 	}
 
@@ -419,11 +423,11 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 }
 
 var textInterpolateRegexp = regexp.MustCompile(`#\{(.*?)\}`)
-var textEscapeRegexp = regexp.MustCompile(`\{\{(.*?)\}\}`)
+var textEscapeRegexp = regexp.MustCompile(`\{<\{(.*?)\}>\}`)
 
 func (c *Compiler) visitText(txt *parser.Text) {
 	value := textEscapeRegexp.ReplaceAllStringFunc(txt.Value, func(value string) string {
-		return `{{"{{"}}` + value[2:len(value)-2] + `{{"}}"}}`
+		return `{<{"{<{"}>}` + value[2:len(value)-2] + `{<{"}>}"}>}`
 	})
 
 	value = textInterpolateRegexp.ReplaceAllStringFunc(value, func(value string) string {
@@ -442,7 +446,7 @@ func (c *Compiler) visitText(txt *parser.Text) {
 }
 
 func (c *Compiler) visitInterpolation(value string) string {
-	return `{{` + c.visitRawInterpolation(value) + `}}`
+	return `{<{` + c.visitRawInterpolation(value) + `}>}`
 }
 
 func (c *Compiler) visitRawInterpolation(value string) string {
@@ -481,7 +485,7 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 
 				negate := false
 				name := c.tempvar()
-				c.write(`{{` + name + ` := `)
+				c.write(`{<{` + name + ` := `)
 
 				switch be.Op {
 				case gt.ADD:
@@ -517,13 +521,13 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 					panic("Unexpected operator!")
 				}
 
-				c.write(pop() + ` ` + pop() + `}}`)
+				c.write(pop() + ` ` + pop() + `}>}`)
 
 				if !negate {
 					stack.PushFront(name)
 				} else {
 					negname := c.tempvar()
-					c.write(`{{` + negname + ` := not ` + name + `}}`)
+					c.write(`{<{` + negname + ` := not ` + name + `}>}`)
 					stack.PushFront(negname)
 				}
 			}
@@ -534,7 +538,7 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 				exec(ue.X)
 
 				name := c.tempvar()
-				c.write(`{{` + name + ` := `)
+				c.write(`{<{` + name + ` := `)
 
 				switch ue.Op {
 				case gt.SUB:
@@ -547,7 +551,7 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 					panic("Unexpected operator!")
 				}
 
-				c.write(pop() + `}}`)
+				c.write(pop() + `}>}`)
 				stack.PushFront(name)
 			}
 		case *ast.ParenExpr:
@@ -575,7 +579,7 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 			}
 
 			name := c.tempvar()
-			c.write(`{{` + name + ` := ` + x + `.` + se.Sel.Name + `}}`)
+			c.write(`{<{` + name + ` := ` + x + `.` + se.Sel.Name + `}>}`)
 			stack.PushFront(name)
 		case *ast.CallExpr:
 			ce := expr.(*ast.CallExpr)
@@ -598,10 +602,10 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 
 			if builtin {
 				stack.PushFront(ce.Fun.(*ast.Ident).Name)
-				c.write(`{{` + name + ` := ` + pop())
+				c.write(`{<{` + name + ` := ` + pop())
 			} else {
 				exec(ce.Fun)
-				c.write(`{{` + name + ` := call ` + pop())
+				c.write(`{<{` + name + ` := call ` + pop())
 			}
 
 			for i := 0; i < len(ce.Args); i++ {
@@ -609,7 +613,7 @@ func (c *Compiler) visitExpression(outerexpr ast.Expr) string {
 				c.write(pop())
 			}
 
-			c.write(`}}`)
+			c.write(`}>}`)
 
 			stack.PushFront(name)
 		default:
