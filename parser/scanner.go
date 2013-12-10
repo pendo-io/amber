@@ -347,18 +347,25 @@ func (s *scanner) scanClassName() *token {
 	return nil
 }
 
-var rgxAttribute = regexp.MustCompile(`^\[([\w\-]+)\s*(?:=\s*(\"((?:[^\"\\])*)\"|([^\]]+)))?\](?:\s*\?\s*(.*)$)?`)
+var rgxAttribute = regexp.MustCompile(`^\[([\w\-]+)\s*(?:=\s*(\"([^\"\\]*)\"|([^\]]+)))?\](?:\s*\?\s*(.*)$)?`)
 
 func (s *scanner) scanAttribute() *token {
 	if sm := rgxAttribute.FindStringSubmatch(s.buffer); len(sm) != 0 {
 		s.consume(len(sm[0]))
 
+		fmt.Printf("quoted value: %s in quotes: %s unquoted %s\n",
+			sm[2], sm[3], sm[4])
 		if len(sm[3]) != 0 || sm[2] == "" {
-			fmt.Printf("raw 1: %s 2: %s 3: %s 4: %s\n", sm[1], sm[2], sm[3], sm[4])
+			fmt.Printf("\tis raw\n")
 			return &token{tokAttribute, sm[1], map[string]string{"Content": sm[3], "Mode": "raw", "Condition": sm[5]}}
 		}
 
-		fmt.Printf("exp 1: %s 2: %s 3: %s 4: %s\n", sm[1], sm[2], sm[3], sm[4])
+		//fmt.Printf("exp 1: %s 2: %s 3: %s 4: %s\n", sm[1], sm[2], sm[3], sm[4])
+		r := regexp.MustCompile(`\\"`)
+		fmt.Printf("\tbefore %s", sm[2])
+		sm[2] = r.ReplaceAllLiteralString(sm[2], `"`)
+		fmt.Printf(" after %s\n", sm[2])
+
 		return &token{tokAttribute, sm[1], map[string]string{"Content": sm[4], "Mode": "expression", "Condition": sm[5]}}
 	}
 

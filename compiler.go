@@ -334,6 +334,8 @@ func (c *Compiler) visitAssignment(assgn *parser.Assignment) {
 	c.write(`{<{` + assgn.X + ` := ` + c.visitRawInterpolation(assgn.Expression) + `}>}`)
 }
 
+var quoteEscape = regexp.MustCompile(`^([^"]|\\")*$`)
+
 func (c *Compiler) visitTag(tag *parser.Tag) {
 	type attrib struct {
 		name      string
@@ -347,13 +349,17 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 		attr := new(attrib)
 		attr.name = item.Name
 
+		fmt.Printf("1 ATTR %s value %s\n", item.Name, item.Value)
 		if !item.IsRaw {
 			attr.value = c.visitInterpolation(item.Value)
 		} else if item.Value == "" {
 			attr.value = ""
 		} else if len(item.Value) > 5 && strings.Index(item.Value, "{{") < strings.Index(item.Value, "}}") {
 			attr.value = item.Value
+		} else if item.IsRaw {
+			attr.value = item.Value
 		} else {
+			fmt.Printf(" 2ATTR %s value %s\n", item.Name, item.Value)
 			attr.value = `{<{"` + item.Value + `"}>}`
 		}
 
