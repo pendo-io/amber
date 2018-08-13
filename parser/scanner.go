@@ -205,8 +205,6 @@ func (s *scanner) NextRaw() *token {
 			s.consume(len(s.buffer))
 		}
 	}
-
-	return nil
 }
 
 var rgxIndent = regexp.MustCompile(`^(\s+)`)
