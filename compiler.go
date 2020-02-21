@@ -11,7 +11,7 @@ import (
 	"html/template"
 	"io"
 	"path/filepath"
-	"pendo.io/forks/amber/parser"
+	"github.com/pendo-io/amber/parser"
 	"reflect"
 	"regexp"
 	"strconv"

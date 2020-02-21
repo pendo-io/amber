@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	amber "pendo.io/forks/amber"
+	"github.com/pendo-io/amber"
 )
 
 var prettyPrint bool
