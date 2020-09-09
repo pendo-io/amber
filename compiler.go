@@ -5,13 +5,13 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/pendo-io/amber/parser"
 	"go/ast"
 	gp "go/parser"
 	gt "go/token"
 	"html/template"
 	"io"
 	"path/filepath"
-	"github.com/pendo-io/amber/parser"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -349,7 +349,6 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 		attr := new(attrib)
 		attr.name = item.Name
 
-		fmt.Printf("1 ATTR %s value %s\n", item.Name, item.Value)
 		if !item.IsRaw {
 			attr.value = c.visitInterpolation(item.Value)
 		} else if item.Value == "" {
@@ -359,7 +358,6 @@ func (c *Compiler) visitTag(tag *parser.Tag) {
 		} else if item.IsRaw {
 			attr.value = item.Value
 		} else {
-			fmt.Printf(" 2ATTR %s value %s\n", item.Name, item.Value)
 			attr.value = `{<{"` + item.Value + `"}>}`
 		}
 
